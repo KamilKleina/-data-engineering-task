@@ -1,5 +1,11 @@
 # data-engineer assignment
 
+# 0. Preparation
+
+1. Create a new private repository and push the original assignment to it
+2. Create a pull request in your new repo with your implementation, write a short description of your solution and flag for any constraints and/or trade-offs in your code. Treat it as you would like to treat any PR at work
+3. Ask your contact person for reviewers to assign to your PR. Hopefully you'll exchange some comments & feedback before having a follow up discussion in person or online.
+
 # 1. Code task
 
 The task is to construct a HTTP server that listens on `http://localhost:8080`,
