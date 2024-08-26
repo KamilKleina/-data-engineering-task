@@ -129,7 +129,9 @@ level_1,level_2,item_id
 
 # 2. Design task
 
-The design task is a discussion-based task that will be done together with 1-2 data engineers at Formulate to answer the question:
+The design task is a discussion-based task. In preparation for it, please write down a few notes and share it with us beforehand. 
+
+The discussion will be had with 1-2 data engineers at Formulate to answer the question:
 
 > How would you design a system to validate time-based forecasts?
 > What key aspects are there to consider?
