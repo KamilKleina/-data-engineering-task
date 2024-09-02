@@ -129,9 +129,9 @@ level_1,level_2,item_id
 
 # 2. Design task
 
-The design task is a discussion-based task. In preparation for it, please write down a few notes and share it with us beforehand. 
+The design task is a discussion-based task. In preparation for it, please write down a few notes and share it with us beforehand. The notes are to be used as a basis for discussion - we find it easier to have a worthwhile discussion with the applicant if they jot something down beforehand as it allows us to prepare questions. The notes do not need to be comprehensive, they simply need to outline the answers to the questions.
 
-The discussion will be had with 1-2 data engineers at Formulate to answer the question:
+The discussion will be had with 1-2 data engineers to answer the question:
 
 > How would you design a system to validate time-based forecasts?
 > What key aspects are there to consider?
