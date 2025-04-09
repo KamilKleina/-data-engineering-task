@@ -1,157 +1,129 @@
-# data-engineer assignment
+# Table of Contents
 
-# 0. Preparation
+   1. [Description](#description)
+   2. [Notes for Reviewers](#notes-for-reviewers)
+   3. [Getting Started](#getting-started)
+      1. [Prerequisites](#prerequisites)
+      2. [Local Development](#local-development)
+      3. [Docker](#docker)
 
-1. Create a new private repository and push the original assignment to it
-2. Create a pull request in your new repo with your implementation, write a short description of your solution and flag for any constraints and/or trade-offs in your code. Treat it as you would like to treat any PR at work
-3. Ask your contact person for reviewers to assign to your PR. Hopefully you'll exchange some comments & feedback before having a follow up discussion in person or online.
+## Description
 
-# 1. Code task
+This module converts flat CSV data into a nested JSON hierarchy based on up to  
+three levels and an `item_id`. It handles validation rules such as required  
+fields and disallows skipped hierarchy levels. Designed for clean API  
+integration, it returns structured output.
 
-The task is to construct a HTTP server that listens on `http://localhost:8080`,
-takes in a hierarchy of items in a flat structure (`CSV`), and returns it as a
-nested hierarchical structure (`JSON`).
+## Getting Started
 
-## Running the tests
+### Prerequisites
 
-The tests are defined in `io_test.go` and can be run with `go test`.
+- Python 3.13  
+- [`uv`](https://github.com/astral-sh/uv) (install with `pip install uv`)  
+- [`just`](https://github.com/casey/just) (optional but recommended)  
+- Docker (optional, for containerized runs)
 
-Note that the code can be written in any language of choice (e.g. Python, Java, Scala, Go etc).
+You can run the project locally with Python and `uv`, or use Docker if you  
+prefer a containerized environment. `just` is used to simplify common commands  
+for both setups.
 
-## The task
+To install dependencies and run application:
 
-The input payload has the following schema:
-
-| Column    | Type   | Required                                |
-| --------- | ------ | --------------------------------------- |
-| `level_1` | String | Yes                                     |
-| `level_2` | String | Yes if `level_3` is given, otherwise no |
-| `level_3` | String | No                                      |
-| `item_id` | String | Yes                                     |
-
-An example input:
-
-```csv
-level_1,level_2,item_id
-category_1,category_2,item_1
-category_1,category_3,item_2
+```shell
+just prod-sync
+just run
 ```
 
-The task is to respond with the following schema:
+### Local Development
 
-```json
-{
-  "children": {
-    "$id": {
-      "children": {
-        "$item_id": {
-          "item": true
-        }
-      }
-    }
-  }
-}
+```shell
+just dev-sync
+just dev
 ```
 
-For example:
+### Tests
 
-```json
-{
-  "children": {
-    "category_1": {
-      "children": {
-        "category_2": {
-          "children": {
-            "item_1": {
-              "item": true
-            }
-          }
-        },
-        "category_3": {
-          "children": {
-            "item_2": {
-              "item": true
-            }
-          }
-        }
-      }
-    }
-  }
-}
+To run tests:
+
+```shell
+just test
 ```
 
-## Special cases
+### Docker
 
-Levels that contain empty strings should be interpreted as the end of that
-hierarchy branch, for example:
+Application can be run inside docker:
 
-```csv
-level_1,level_2,item_id
-category_1,,item_1
-category_2,category_3,item_2
+```shell
+just docker
 ```
 
-Corresponds to the following `JSON`:
+## Notes for Reviewers
 
-```json
-{
-  "children": {
-    "category_1": {
-      "children": {
-        "item_1": { "item": true }
-      }
-    },
-    "category_2": {
-      "children": {
-        "category_3": {
-          "children": {
-            "item_2": { "item": true }
-          }
-        }
-      }
-    }
-  }
-}
-```
+### Task 1
 
-Missing columns should be interpreted as empty for the remainder of that hierarchy path.
+Regarding the code: I think it's pretty solid and built the right way –
+modular, separated concerns, easy to follow. In a real production setup,
+we'd wrap it with all the usual trimmings: a proper CI/CD pipeline
+kicking off tests and deployments, structured logging piped somewhere
+useful (like Splunk/Datadog), better error handling and alerting,
+monitoring dashboards, the works.
 
-Inputs where level _n_ is empty but level _n+1_ is non-empty should return the
-[http status code `Bad Request`][400] as these constitute an invalid structure.
-The following, for example is an example of such an invalid payload:
+For this exercise though, I included the basics – Docker to run it, a
+Justfile for common commands, and README – enough to show it works and
+how you'd integrate it. I skipped stuff like API versioning or complex
+routing since the requirement was just to hit `localhost:8080` directly.
+Kept it lean to focus on the core task.
 
-```csv
-level_1,level_2,item_id
-,category_2,item_1
-```
+### Tasks 2
 
-[400]: https://en.wikipedia.org/wiki/List_of_HTTP_status_codes#4xx_Client_errors
+#### On a high level, how would you design a data model/schema in a database, e.g. PostgreSQL or BigQuery, to support the above forecast validation?
 
-# 2. Design task
+I've split the schema into distinct tables to keep data types separate. I have a
+forecasts table for weekly predictions, an actual table for historical sales and
+unit costs, and a price log table that records all price change events with  
+timestamps. The validation_runs table holds the details of each experiment’s  
+training and test periods and links to both forecasts and metrics via a unique  
+run ID. This modular design not only makes it easier to version and compare  
+different model experiments but also scales efficiently using PostgreSQL for  
+transactional work and BigQuery for large-scale analytics.
 
-The design task is a discussion-based task. In preparation for it, please write down a few notes and share it with us beforehand. The notes are to be used as a basis for discussion - we find it easier to have a worthwhile discussion with the applicant if they jot something down beforehand as it allows us to prepare questions. The notes do not need to be comprehensive, they simply need to outline the answers to the questions.
+#### How would you make sure that we can Store the outputs of several validation rounds, i.e. successively rolled windows in the rolling validation strategy? Store the outputs of several model experiments?
 
-The discussion will be had with 1-2 data engineers to answer the question:
+I ensure proper tracking by assigning a unique run_id to every validation
+round, which represents a specific train/test window in the rolling validation
+strategy. Each forecast and its evaluation metrics are linked to this run_id,
+allowing us to trace back and compare results across time. Additionally, an
+experiment_id is used to differentiate outputs from various model experiments.
+This approach provides a clear separation of results for each validation round
+and experiment, making performance comparisons straightforward.
 
-> How would you design a system to validate time-based forecasts?
-> What key aspects are there to consider?
+#### How would you design a pipeline that allows for running parameterized validation?
 
-In simplified terms, we help retailers forecast their sales into the future in terms of units sold, revenue, and profit (`profit = units sold * (unit price - unit cost)`).
+A parameterized validation pipeline can be implemented using orchestration
+tools like Airflow or Prefect, which allow you to pass in dynamic parameters
+such as training and testing windows, as well as model configurations. This
+setup automatically slices the data, executes the model training, and
+evaluates the forecasts. It provides a repeatable and flexible process that
+can easily adapt to different scenarios by simply changing the input
+parameters. This ensures consistent and robust validation cycles for our
+forecasting models.
 
-For these three to be calculated the following inputs are required:
+#### Some features that act like an event log, like price, will need to be "gridded" to the relevant date. What method would you use to join it into the relevant time window?
 
-- **Units sold.** Aggregated to the calendar week window. The target feature of our forecasts.
-- **Unit price.** Expressed as a timestamped event log consisting of past and future price changes.
-- **Unit cost.** Provided per calendar week window, but only for historic dates. For simplicity, we assume that the cost in the future is that of the last observation.
+For gridding event log features like price, I use an as-of join to match each
+calendar week with the latest price event that occurred on or before the week’s
+start. This ensures that every time window is assigned the appropriate price
+value. Technically, this can be implemented using SQL lateral joins or window
+functions to efficiently retrieve the latest event. This approach ensures
+accurate alignment of event data with the respective forecast periods.
 
-We employ the [rolling origin](https://cran.r-project.org/web/packages/greybox/vignettes/ro.html) validation strategy when evaluating the performance of our models. It means that we train a sequence of models, iteratively extending the training set with more recent data, and moving the test set forward in time.
+#### Some features that are unknown in the future, like cost, will need to be filled in for future dates. What method would you use to forward fill them into future time windows?
 
-![design-task-illustration](https://github.com/formulatehq/data-engineer/raw/master/design-task-illustration.png)
-
-- On a high level, how would you design a data model/schema in a database, e.g. PostgreSQL or BigQuery, to support the above forecast validation?
-- How would you make sure that we can:
-  - Store the outputs of several validation rounds, i.e. successively rolled windows in the rolling validation strategy?
-  - Store the outputs of several model experiments?
-- How would you design a pipeline that allows for running parameterized validation?
-- Some features that act like an event log, like price, will need to be "gridded" to the relevant date. What method would you use to join it into the relevant time window?
-- Some features that are unknown in the future, like cost, will need to be filled in for future dates. What method would you use to _forward fill_ them into future time windows?
+For features like cost that are unknown in the future, I use forward filling
+to extend the last known value into future time windows. This can be
+implemented with SQL window functions such as LAST_VALUE() OVER (PARTITION BY
+product_id ORDER BY calendar_week) with the appropriate settings, or using
+pandas’ ffill() method during data preprocessing. This technique carries
+forward the most recent observation, ensuring that future periods have a valid
+cost value. It’s a straightforward method to handle missing future data,
+especially when I assume the cost remains stable until updated.
